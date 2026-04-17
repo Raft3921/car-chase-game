@@ -1,0 +1,321 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #11130f;
+  color: #f8f4e8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#game-root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  touch-action: none;
+}
+
+#game-root {
+  position: relative;
+  background: #11130f;
+}
+
+#game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(17, 19, 15, 0.45), rgba(17, 19, 15, 0.88));
+  z-index: 10;
+}
+
+.screen.is-active {
+  display: flex;
+}
+
+.title-block,
+.choice-panel,
+.dialogue-box,
+.result-box {
+  width: min(920px, 100%);
+}
+
+.title-block {
+  align-self: flex-end;
+  padding-bottom: min(12vh, 92px);
+}
+
+.kicker {
+  margin: 0 0 10px;
+  color: #ffd34d;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 16px;
+  font-size: clamp(2.8rem, 8vw, 6.2rem);
+  line-height: 0.94;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+h2 {
+  margin-bottom: 20px;
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  line-height: 1;
+}
+
+.lead {
+  max-width: 640px;
+  margin-bottom: 26px;
+  color: #f0e8d4;
+  font-size: 1.15rem;
+  line-height: 1.7;
+}
+
+button {
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.primary-button {
+  min-width: 168px;
+  min-height: 52px;
+  border-radius: 8px;
+  background: #e9362f;
+  color: #fff9ed;
+  font-weight: 900;
+  box-shadow: 0 12px 30px rgba(233, 54, 47, 0.32);
+}
+
+.primary-button:focus-visible,
+.choice-card:focus-visible,
+.mobile-controls button:focus-visible {
+  outline: 3px solid #ffd34d;
+  outline-offset: 3px;
+}
+
+.difficulty-screen,
+.vehicle-screen {
+  justify-content: flex-start;
+  background: rgba(17, 19, 15, 0.75);
+}
+
+.choice-panel {
+  transform: translateX(-24px);
+  animation: slide-in 300ms ease-out forwards;
+}
+
+@keyframes slide-in {
+  to {
+    transform: translateX(0);
+  }
+}
+
+.choice-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.vehicle-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.choice-card {
+  min-height: 156px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(248, 244, 232, 0.1);
+  text-align: left;
+}
+
+.choice-card strong {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 1.35rem;
+}
+
+.choice-card span {
+  display: block;
+  color: #d9d0bd;
+  line-height: 1.5;
+}
+
+.choice-card:hover {
+  border-color: #ffd34d;
+  background: rgba(255, 211, 77, 0.16);
+}
+
+.dialogue-screen {
+  align-items: flex-end;
+  background: rgba(17, 19, 15, 0.35);
+}
+
+.dialogue-box,
+.result-box {
+  max-width: 760px;
+  border-radius: 8px;
+  padding: 22px;
+  background: rgba(18, 20, 18, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.dialogue-box p,
+.result-box p {
+  margin-bottom: 18px;
+  font-size: 1.22rem;
+  line-height: 1.7;
+}
+
+.hud {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 5;
+  pointer-events: none;
+}
+
+.hud-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hud-item {
+  min-width: 116px;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: rgba(16, 18, 16, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hud-item span {
+  display: block;
+  color: #d8d0be;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.hud-item strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 1.1rem;
+}
+
+.arrest-meter {
+  width: min(360px, 100%);
+  height: 12px;
+  margin-top: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.arrest-meter span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: #e9362f;
+  transition: width 80ms linear;
+}
+
+.mobile-controls {
+  position: absolute;
+  inset: auto max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  z-index: 6;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.mobile-controls button {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgba(248, 244, 232, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  font-weight: 900;
+  pointer-events: auto;
+}
+
+.mobile-controls button.is-held {
+  background: #ffd34d;
+  color: #141511;
+}
+
+.steer-controls,
+.drive-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.drive-controls .taunt-button {
+  background: rgba(233, 54, 47, 0.7);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mobile-controls {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .screen {
+    padding: 18px;
+  }
+
+  .title-block {
+    padding-bottom: 120px;
+  }
+
+  .choice-row,
+  .vehicle-row {
+    grid-template-columns: 1fr;
+    max-height: 68vh;
+    overflow-y: auto;
+  }
+
+  .choice-card {
+    min-height: 118px;
+  }
+
+  .dialogue-box,
+  .result-box {
+    margin-bottom: 96px;
+  }
+
+  .hud-item {
+    min-width: 96px;
+  }
+}
