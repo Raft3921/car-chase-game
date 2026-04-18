@@ -23,6 +23,14 @@ export class UI {
     this.restartButton.addEventListener("click", callback);
   }
 
+  onResume(callback) {
+    this.resumeButton.addEventListener("click", callback);
+  }
+
+  onQuit(callback) {
+    this.quitButton.addEventListener("click", callback);
+  }
+
   onDifficulty(callback) {
     this.difficultyCallback = callback;
   }
@@ -34,9 +42,9 @@ export class UI {
   show(name) {
     Object.values(this.screens).forEach((screen) => screen.classList.remove("is-active"));
     if (this.screens[name]) this.screens[name].classList.add("is-active");
-    const playing = name === "play";
-    this.hud.hidden = !playing;
-    this.mobileControls.hidden = !playing;
+    const inRun = name === "play" || name === "pause";
+    this.hud.hidden = !inRun;
+    this.mobileControls.hidden = name !== "play";
   }
 
   setDialogue(line, buttonLabel = "進む") {
@@ -66,6 +74,10 @@ export class UI {
     this.resultTitle.textContent = won ? "逃げ切った！" : "逮捕された";
     this.resultSummary.textContent = `難易度：${difficulty.label} / 生存：${formatTime(survived)} / 煽り：${taunts}回 / 最大パトカー：${maxPolice}台`;
     this.show("result");
+  }
+
+  showPause() {
+    this.show("pause");
   }
 
   createScreens() {
@@ -102,6 +114,17 @@ export class UI {
       element("div", { className: "dialogue-box" }, [this.dialogueText, this.dialogueButton]),
     ]);
 
+    this.resumeButton = element("button", { id: "resume-button", className: "primary-button", text: "再開" });
+    this.quitButton = element("button", { id: "quit-button", className: "secondary-button", text: "タイトルへ" });
+    this.screens.pause = element("section", { id: "pause-screen", className: "screen pause-screen" }, [
+      element("div", { className: "pause-box" }, [
+        element("p", { className: "kicker", text: "一時停止" }),
+        element("h2", { text: "ポーズ中" }),
+        element("p", { className: "lead", text: "P または Esc で再開できます。進行状況はこのブラウザに保存されています。" }),
+        element("div", { className: "button-row" }, [this.resumeButton, this.quitButton]),
+      ]),
+    ]);
+
     this.resultKicker = element("p", { id: "result-kicker", className: "kicker", text: "逃走終了" });
     this.resultTitle = element("h2", { id: "result-title", text: "ゲームオーバー" });
     this.resultSummary = element("p", { id: "result-summary" });
@@ -120,6 +143,7 @@ export class UI {
       this.screens.difficulty,
       this.screens.vehicle,
       this.screens.intro,
+      this.screens.pause,
       this.screens.result
     );
   }

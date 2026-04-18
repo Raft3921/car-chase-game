@@ -3,28 +3,22 @@ export const difficulties = [
     id: "easy",
     label: "イージー",
     duration: 60 * 60,
-    demoDuration: 90,
-    policeSpeed: 15,
-    trafficCount: 10,
-    description: "1時間逃げ切り。まずは街に慣れる。",
+    trafficCount: 8,
+    description: "現実の1時間逃げ切り。荒野に慣れる。",
   },
   {
     id: "normal",
     label: "ノーマル",
     duration: 10 * 60 * 60,
-    demoDuration: 150,
-    policeSpeed: 18,
-    trafficCount: 16,
-    description: "10時間逃げ切り。追跡も交通量も本番。",
+    trafficCount: 12,
+    description: "現実の10時間逃げ切り。本番の耐久逃走。",
   },
   {
     id: "hard",
     label: "ハード",
     duration: 20 * 60 * 60,
-    demoDuration: 210,
-    policeSpeed: 21,
-    trafficCount: 22,
-    description: "20時間逃げ切り。タイトル通りの地獄。",
+    trafficCount: 16,
+    description: "現実の20時間逃げ切り。タイトル通りの地獄。",
   },
 ];
 
@@ -86,7 +80,7 @@ export const introLines = [
 ];
 
 export const world = {
-  size: 180,
-  roadHalfWidth: 6,
-  blockSpacing: 30,
+  size: 240,
+  roadHalfWidth: 7,
+  propSpacing: 26,
 };

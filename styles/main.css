@@ -181,6 +181,7 @@ button {
 }
 
 .dialogue-box,
+.pause-box,
 .result-box {
   max-width: 760px;
   border-radius: 8px;
@@ -190,10 +191,27 @@ button {
 }
 
 .dialogue-box p,
+.pause-box p,
 .result-box p {
   margin-bottom: 18px;
   font-size: 1.22rem;
   line-height: 1.7;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.secondary-button {
+  min-width: 168px;
+  min-height: 52px;
+  border-radius: 8px;
+  background: rgba(248, 244, 232, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #fff9ed;
+  font-weight: 900;
 }
 
 .hud {

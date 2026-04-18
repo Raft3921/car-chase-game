@@ -1,8 +1,11 @@
 import * as THREE from "three";
-import { introLines, world } from "./config.js";
+import { difficulties, introLines, vehicles, world } from "./config.js";
 import { Player } from "./player.js";
 import { PoliceCar } from "./police.js";
 import { TrafficCar } from "./traffic.js";
+
+const SAVE_KEY = "carChaseGame.save.v1";
+const SAVE_INTERVAL = 2;
 
 export class Game {
   constructor(canvas, input, ui) {
@@ -25,7 +28,8 @@ export class Game {
     this.arrest = 0;
     this.elapsed = 0;
     this.maxPolice = 0;
-    this.demoTimeScale = 1;
+    this.saveTimer = 0;
+    this.isPaused = false;
 
     this.createWorld();
     this.resize();
@@ -35,12 +39,15 @@ export class Game {
 
   showAttract() {
     this.state = "attract";
+    this.isPaused = false;
+    this.clearSave();
     this.ui.show("title");
     this.camera.position.set(24, 28, 34);
     this.camera.lookAt(0, 0, 0);
   }
 
   chooseDifficulty() {
+    this.clearSave();
     this.ui.show("difficulty");
   }
 
@@ -64,8 +71,10 @@ export class Game {
 
   startRun() {
     this.state = "playing";
+    this.isPaused = false;
     this.scene.rotation.set(0, 0, 0);
     this.ui.show("play");
+    this.saveRun();
     this.clock.getDelta();
   }
 
@@ -81,7 +90,7 @@ export class Game {
     this.arrest = 0;
     this.elapsed = 0;
     this.maxPolice = this.police.length;
-    this.demoTimeScale = this.difficulty.duration / this.difficulty.demoDuration;
+    this.saveTimer = 0;
   }
 
   clearActors() {
@@ -97,6 +106,11 @@ export class Game {
     const rawDt = Math.min(this.clock.getDelta(), 0.05);
     if (this.state === "playing") {
       this.update(rawDt);
+    } else if (this.state === "paused") {
+      const input = this.input.snapshot();
+      if (input.pause) {
+        this.resume();
+      }
     } else if (this.state === "attract") {
       this.scene.rotation.y = Math.sin(performance.now() * 0.00008) * 0.025;
     }
@@ -106,6 +120,10 @@ export class Game {
 
   update(dt) {
     const input = this.input.snapshot();
+    if (input.pause) {
+      this.pause();
+      return;
+    }
     if (input.taunt) {
       this.taunt();
     }
@@ -125,8 +143,13 @@ export class Game {
     this.resolvePoliceTrafficAccidents();
 
     this.updateArrest(dt, nearestPolice);
-    this.updateCamera(dt);
-    this.elapsed += dt * this.demoTimeScale;
+    this.updateCamera();
+    this.elapsed += dt;
+    this.saveTimer += dt;
+    if (this.saveTimer >= SAVE_INTERVAL) {
+      this.saveTimer = 0;
+      this.saveRun();
+    }
 
     const remaining = this.difficulty.duration - this.elapsed;
     this.ui.updateHud({
@@ -154,8 +177,8 @@ export class Game {
   }
 
   spawnPolice(position) {
-    const speed = this.difficulty?.policeSpeed ?? 16;
-    const car = new PoliceCar(this.textures.police, position, speed + Math.random() * 2);
+    const speed = this.vehicle?.maxSpeed ?? 20;
+    const car = new PoliceCar(this.textures.police, position, speed);
     this.police.push(car);
     this.scene.add(car.mesh);
     this.addBillboard(car.mesh);
@@ -230,6 +253,7 @@ export class Game {
 
   finish(won) {
     this.state = "result";
+    this.clearSave();
     this.ui.showResult({
       won,
       difficulty: this.difficulty,
@@ -255,38 +279,25 @@ export class Game {
     ground.rotation.x = -Math.PI / 2;
     this.scene.add(ground);
 
-    const roadMaterial = new THREE.MeshBasicMaterial({ color: 0xf0a27f });
+    const roadMaterial = new THREE.MeshBasicMaterial({ color: 0xc9895f });
     const roadGeo = new THREE.PlaneGeometry(world.roadHalfWidth * 2, world.size);
-    for (const x of [-30, 0, 30]) {
-      const road = new THREE.Mesh(roadGeo, roadMaterial);
-      road.rotation.x = -Math.PI / 2;
-      road.position.x = x;
-      road.position.y = 0.01;
-      this.scene.add(road);
-    }
-    const crossGeo = new THREE.PlaneGeometry(world.size, world.roadHalfWidth * 2);
-    for (const z of [-30, 0, 30]) {
-      const road = new THREE.Mesh(crossGeo, roadMaterial);
-      road.rotation.x = -Math.PI / 2;
-      road.position.z = z;
-      road.position.y = 0.012;
-      this.scene.add(road);
-    }
+    const road = new THREE.Mesh(roadGeo, roadMaterial);
+    road.rotation.x = -Math.PI / 2;
+    road.position.y = 0.01;
+    this.scene.add(road);
 
     const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xf7f0d5 });
-    for (const x of [-30, 0, 30]) {
-      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.35, world.size), lineMaterial);
-      line.rotation.x = -Math.PI / 2;
-      line.position.set(x, 0.02, 0);
-      this.scene.add(line);
-    }
+    const line = new THREE.Mesh(new THREE.PlaneGeometry(0.35, world.size), lineMaterial);
+    line.rotation.x = -Math.PI / 2;
+    line.position.set(0, 0.02, 0);
+    this.scene.add(line);
 
-    for (let x = -75; x <= 75; x += world.blockSpacing) {
-      for (let z = -75; z <= 75; z += world.blockSpacing) {
-        if (Math.abs(x) <= 8 || Math.abs(z) <= 8 || Math.abs(x - 30) <= 8 || Math.abs(z - 30) <= 8 || Math.abs(x + 30) <= 8 || Math.abs(z + 30) <= 8) {
+    for (let x = -100; x <= 100; x += world.propSpacing) {
+      for (let z = -100; z <= 100; z += world.propSpacing) {
+        if (Math.abs(x) <= 14) {
           continue;
         }
-        this.addBuilding(x, z);
+        this.addDesertProp(x, z);
       }
     }
 
@@ -294,14 +305,14 @@ export class Game {
     this.scene.add(light);
   }
 
-  addBuilding(x, z) {
-    const height = 8 + Math.random() * 12;
+  addDesertProp(x, z) {
+    const height = 3 + Math.random() * 4;
     const material = new THREE.MeshBasicMaterial({
-      map: this.textures.building,
+      map: Math.random() > 0.45 ? this.textures.cactus : this.textures.rock,
       transparent: true,
       side: THREE.DoubleSide,
     });
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, height), material);
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(height * 0.9, height), material);
     mesh.position.set(x + Math.random() * 8 - 4, height / 2, z + Math.random() * 8 - 4);
     mesh.userData.staticBillboard = true;
     this.scene.add(mesh);
@@ -319,6 +330,127 @@ export class Game {
       mesh.lookAt(this.camera.position);
     }
   }
+
+  pause() {
+    if (this.state !== "playing") return;
+    this.state = "paused";
+    this.isPaused = true;
+    this.saveRun();
+    this.ui.showPause();
+  }
+
+  resume() {
+    if (this.state !== "paused") return;
+    this.state = "playing";
+    this.isPaused = false;
+    this.saveRun();
+    this.ui.show("play");
+    this.clock.getDelta();
+  }
+
+  resumeSavedRun() {
+    const save = this.loadSave();
+    if (!save) return false;
+
+    const difficulty = difficulties.find((item) => item.id === save.difficultyId);
+    const vehicle = vehicles.find((item) => item.id === save.vehicleId);
+    if (!difficulty || !vehicle) {
+      this.clearSave();
+      return false;
+    }
+
+    this.difficulty = difficulty;
+    this.vehicle = vehicle;
+    this.resetRun();
+    this.elapsed = THREE.MathUtils.clamp(save.elapsed ?? 0, 0, difficulty.duration);
+    this.taunts = save.taunts ?? 0;
+    this.arrest = THREE.MathUtils.clamp(save.arrest ?? 0, 0, 1);
+    this.maxPolice = Math.max(save.maxPolice ?? 1, 1);
+
+    if (save.player) {
+      this.player.position.fromArray(save.player.position ?? [0, 0.05, 0]);
+      this.player.heading = save.player.heading ?? 0;
+      this.player.speed = save.player.speed ?? 0;
+      this.player.syncMesh();
+    }
+
+    for (const car of this.police) this.scene.remove(car.mesh);
+    this.police = [];
+    this.billboards = this.billboards.filter((mesh) => (
+      mesh.userData.staticBillboard ||
+      mesh === this.player.mesh ||
+      this.traffic.some((car) => car.mesh === mesh)
+    ));
+    for (const item of save.police ?? []) {
+      this.spawnPolice(new THREE.Vector3().fromArray(item.position ?? [0, 0.05, -18]));
+    }
+    if (this.police.length === 0) {
+      this.spawnPolice(new THREE.Vector3(0, 0.05, -18));
+    }
+
+    this.updateCamera();
+    this.ui.updateHud({
+      remaining: this.difficulty.duration - this.elapsed,
+      policeCount: this.police.length,
+      taunts: this.taunts,
+      arrest: this.arrest,
+    });
+
+    if (save.paused) {
+      this.state = "paused";
+      this.isPaused = true;
+      this.ui.showPause();
+    } else {
+      this.state = "playing";
+      this.isPaused = false;
+      this.ui.show("play");
+    }
+    this.clock.getDelta();
+    return true;
+  }
+
+  saveRun() {
+    if (!this.difficulty || !this.vehicle || !this.player || this.state === "result") return;
+    const data = {
+      difficultyId: this.difficulty.id,
+      vehicleId: this.vehicle.id,
+      elapsed: this.elapsed,
+      taunts: this.taunts,
+      arrest: this.arrest,
+      maxPolice: this.maxPolice,
+      paused: this.state === "paused" || this.isPaused,
+      player: {
+        position: this.player.position.toArray(),
+        heading: this.player.heading,
+        speed: this.player.speed,
+      },
+      police: this.police.map((car) => ({
+        position: car.position.toArray(),
+      })),
+    };
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch {
+      // Storage can be unavailable in restrictive browser modes.
+    }
+  }
+
+  loadSave() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  clearSave() {
+    try {
+      localStorage.removeItem(SAVE_KEY);
+    } catch {
+      // Storage can be unavailable in restrictive browser modes.
+    }
+  }
 }
 
 function createTextures() {
@@ -329,7 +461,8 @@ function createTextures() {
     offroad: carTexture("#43b66f", "オ"),
     police: carTexture("#f8f4e8", "警", "#e9362f"),
     traffic: carTexture("#8a94a6", "NPC"),
-    building: buildingTexture(),
+    cactus: cactusTexture(),
+    rock: rockTexture(),
   };
 }
 
@@ -354,21 +487,49 @@ function carTexture(body, label, accent = "#11130f") {
   return new THREE.CanvasTexture(canvas);
 }
 
-function buildingTexture() {
+function cactusTexture() {
   const canvas = document.createElement("canvas");
   canvas.width = 192;
-  canvas.height = 384;
+  canvas.height = 256;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#aebfc0";
-  ctx.fillRect(18, 8, 156, 360);
-  ctx.fillStyle = "#eef5f2";
-  for (let y = 34; y < 330; y += 44) {
-    for (let x = 42; x < 150; x += 42) {
-      ctx.fillRect(x, y, 22, 24);
-    }
-  }
-  ctx.fillStyle = "#2a2f35";
-  ctx.fillRect(0, 360, 192, 24);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#006c1d";
+  roundRect(ctx, 86, 26, 28, 206, 12);
+  ctx.fill();
+  roundRect(ctx, 44, 94, 24, 80, 10);
+  ctx.fill();
+  roundRect(ctx, 124, 74, 24, 92, 10);
+  ctx.fill();
+  ctx.fillRect(62, 146, 34, 20);
+  ctx.fillRect(108, 120, 32, 20);
+  ctx.fillStyle = "#005015";
+  ctx.fillRect(72, 232, 48, 10);
+  return new THREE.CanvasTexture(canvas);
+}
+
+function rockTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 192;
+  canvas.height = 160;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#8e7f6d";
+  ctx.beginPath();
+  ctx.moveTo(28, 132);
+  ctx.lineTo(48, 70);
+  ctx.lineTo(92, 36);
+  ctx.lineTo(146, 62);
+  ctx.lineTo(170, 132);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "#b0a18c";
+  ctx.beginPath();
+  ctx.moveTo(54, 76);
+  ctx.lineTo(92, 44);
+  ctx.lineTo(126, 62);
+  ctx.lineTo(88, 88);
+  ctx.closePath();
+  ctx.fill();
   return new THREE.CanvasTexture(canvas);
 }
 

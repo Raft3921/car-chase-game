@@ -11,6 +11,10 @@ const game = new Game(canvas, input, ui);
 ui.onStart(() => game.chooseDifficulty());
 ui.onDifficulty((difficulty) => game.chooseVehicle(difficulty));
 ui.onVehicle((vehicle) => game.startIntro(vehicle));
+ui.onResume(() => game.resume());
+ui.onQuit(() => game.showAttract());
 ui.onRestart(() => game.showAttract());
 
-game.showAttract();
+if (!game.resumeSavedRun()) {
+  game.showAttract();
+}

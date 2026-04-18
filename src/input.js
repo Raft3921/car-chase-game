@@ -3,13 +3,17 @@ export class InputManager {
     this.keys = new Set();
     this.touch = new Set();
     this.tauntQueued = false;
+    this.pauseQueued = false;
 
     window.addEventListener("keydown", (event) => {
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Escape"].includes(event.key)) {
         event.preventDefault();
       }
       if (event.code === "Space" && !this.keys.has("Space")) {
         this.tauntQueued = true;
+      }
+      if ((event.code === "KeyP" || event.code === "Escape") && !this.keys.has(event.code)) {
+        this.pauseQueued = true;
       }
       this.keys.add(event.code);
     });
@@ -46,12 +50,15 @@ export class InputManager {
     const left = this.keys.has("KeyA") || this.keys.has("ArrowLeft") || this.touch.has("left");
     const right = this.keys.has("KeyD") || this.keys.has("ArrowRight") || this.touch.has("right");
     const taunt = this.tauntQueued;
+    const pause = this.pauseQueued;
     this.tauntQueued = false;
+    this.pauseQueued = false;
 
     return {
       throttle: (accelerate ? 1 : 0) + (brake ? -0.72 : 0),
       steer: (left ? 1 : 0) + (right ? -1 : 0),
       taunt,
+      pause,
     };
   }
 }
