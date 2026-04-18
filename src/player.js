@@ -8,15 +8,15 @@ export class Player {
     this.heading = 0;
     this.speed = 0;
     this.radius = vehicle.radius;
+    this.visualHeight = 2.4;
 
     const material = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
       side: THREE.DoubleSide,
     });
-    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 2.1), material);
-    this.mesh.rotation.x = -Math.PI / 2;
-    this.mesh.position.copy(this.position);
+    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.8, this.visualHeight), material);
+    this.syncMesh();
   }
 
   reset() {
@@ -24,7 +24,7 @@ export class Player {
     this.velocity.set(0, 0, 0);
     this.heading = 0;
     this.speed = 0;
-    this.mesh.position.copy(this.position);
+    this.syncMesh();
   }
 
   update(dt, input, bounds) {
@@ -41,7 +41,10 @@ export class Player {
     this.position.x = THREE.MathUtils.clamp(this.position.x, -bounds, bounds);
     this.position.z = THREE.MathUtils.clamp(this.position.z, -bounds, bounds);
 
-    this.mesh.position.copy(this.position);
-    this.mesh.rotation.z = -this.heading;
+    this.syncMesh();
+  }
+
+  syncMesh() {
+    this.mesh.position.set(this.position.x, this.visualHeight / 2, this.position.z);
   }
 }

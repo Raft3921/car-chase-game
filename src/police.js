@@ -7,22 +7,21 @@ export class PoliceCar {
     this.radius = 1.25;
     this.cooldown = Math.random() * 0.5;
     this.crashTimer = 0;
+    this.visualHeight = 2.35;
 
     const material = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
       side: THREE.DoubleSide,
     });
-    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 2.1), material);
-    this.mesh.rotation.x = -Math.PI / 2;
-    this.mesh.position.copy(this.position);
+    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.8, this.visualHeight), material);
+    this.syncMesh();
   }
 
   update(dt, targetPosition, others) {
     if (this.crashTimer > 0) {
       this.crashTimer -= dt;
-      this.mesh.position.copy(this.position);
-      this.mesh.rotation.z += dt * 4;
+      this.syncMesh();
       return this.position.distanceTo(targetPosition);
     }
 
@@ -46,13 +45,16 @@ export class PoliceCar {
 
     desired.addScaledVector(separation, 1.4).normalize();
     this.position.addScaledVector(desired, this.speed * dt);
-    this.mesh.position.copy(this.position);
-    this.mesh.rotation.z = -Math.atan2(desired.x, desired.z);
+    this.syncMesh();
 
     return distance;
   }
 
   crash() {
     this.crashTimer = 1.2;
+  }
+
+  syncMesh() {
+    this.mesh.position.set(this.position.x, this.visualHeight / 2, this.position.z);
   }
 }

@@ -7,22 +7,25 @@ export class TrafficCar {
     this.speed = speed;
     this.radius = 1.15;
     this.position = new THREE.Vector3(lane, 0.04, offset);
+    this.visualHeight = 2.1;
 
     const material = new THREE.MeshBasicMaterial({
       map: texture,
       transparent: true,
       side: THREE.DoubleSide,
     });
-    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.9), material);
-    this.mesh.rotation.x = -Math.PI / 2;
-    this.mesh.rotation.z = direction > 0 ? Math.PI : 0;
-    this.mesh.position.copy(this.position);
+    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.4, this.visualHeight), material);
+    this.syncMesh();
   }
 
   update(dt, wrap) {
     this.position.z += this.direction * this.speed * dt;
     if (this.position.z > wrap) this.position.z = -wrap;
     if (this.position.z < -wrap) this.position.z = wrap;
-    this.mesh.position.copy(this.position);
+    this.syncMesh();
+  }
+
+  syncMesh() {
+    this.mesh.position.set(this.position.x, this.visualHeight / 2, this.position.z);
   }
 }

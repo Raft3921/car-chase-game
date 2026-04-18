@@ -11,12 +11,13 @@ export class Game {
     this.ui = ui;
     this.clock = new THREE.Clock();
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x151a18);
-    this.camera = new THREE.PerspectiveCamera(58, 1, 0.1, 600);
+    this.scene.background = new THREE.Color(0x079fd0);
+    this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 600);
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     this.textures = createTextures();
+    this.billboards = [];
     this.police = [];
     this.traffic = [];
     this.state = "title";
@@ -63,6 +64,7 @@ export class Game {
 
   startRun() {
     this.state = "playing";
+    this.scene.rotation.set(0, 0, 0);
     this.ui.show("play");
     this.clock.getDelta();
   }
@@ -71,6 +73,7 @@ export class Game {
     this.clearActors();
     this.player = new Player(this.vehicle, this.textures[this.vehicle.id]);
     this.scene.add(this.player.mesh);
+    this.addBillboard(this.player.mesh);
     this.player.reset();
     this.spawnPolice(new THREE.Vector3(0, 0.05, -18));
     this.spawnTraffic(this.difficulty.trafficCount);
@@ -87,6 +90,7 @@ export class Game {
     for (const car of this.traffic) this.scene.remove(car.mesh);
     this.police = [];
     this.traffic = [];
+    this.billboards = this.billboards.filter((mesh) => mesh.userData.staticBillboard);
   }
 
   tick() {
@@ -96,6 +100,7 @@ export class Game {
     } else if (this.state === "attract") {
       this.scene.rotation.y = Math.sin(performance.now() * 0.00008) * 0.025;
     }
+    this.faceBillboards();
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -153,6 +158,7 @@ export class Game {
     const car = new PoliceCar(this.textures.police, position, speed + Math.random() * 2);
     this.police.push(car);
     this.scene.add(car.mesh);
+    this.addBillboard(car.mesh);
     this.maxPolice = Math.max(this.maxPolice, this.police.length);
   }
 
@@ -165,17 +171,17 @@ export class Game {
       const direction = i % 3 === 0 ? -1 : 1;
       const car = new TrafficCar(this.textures.traffic, lane, offset, direction, 8 + Math.random() * 7);
       if (!vertical) {
-        car.mesh.rotation.z += Math.PI / 2;
         car.position.set(offset, 0.04, lane);
         car.update = function update(dt, wrap) {
           this.position.x += this.direction * this.speed * dt;
           if (this.position.x > wrap) this.position.x = -wrap;
           if (this.position.x < -wrap) this.position.x = wrap;
-          this.mesh.position.copy(this.position);
+          this.syncMesh();
         };
       }
       this.traffic.push(car);
       this.scene.add(car.mesh);
+      this.addBillboard(car.mesh);
     }
   }
 
@@ -213,11 +219,12 @@ export class Game {
     this.arrest = THREE.MathUtils.clamp(this.arrest, 0, 1);
   }
 
-  updateCamera(dt) {
+  updateCamera() {
     const back = new THREE.Vector3(-Math.sin(this.player.heading), 0, -Math.cos(this.player.heading));
-    const target = this.player.position.clone().addScaledVector(back, 18).add(new THREE.Vector3(0, 18, 0));
-    this.camera.position.lerp(target, 1 - Math.pow(0.001, dt));
-    const lookAt = this.player.position.clone().add(new THREE.Vector3(0, 0, 8));
+    const forward = new THREE.Vector3(Math.sin(this.player.heading), 0, Math.cos(this.player.heading));
+    const target = this.player.position.clone().addScaledVector(back, 13).add(new THREE.Vector3(0, 7.5, 0));
+    this.camera.position.copy(target);
+    const lookAt = this.player.position.clone().addScaledVector(forward, 8).add(new THREE.Vector3(0, 2.2, 0));
     this.camera.lookAt(lookAt);
   }
 
@@ -243,12 +250,12 @@ export class Game {
   createWorld() {
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(world.size, world.size),
-      new THREE.MeshBasicMaterial({ color: 0x274434 })
+      new THREE.MeshBasicMaterial({ color: 0xd64c00 })
     );
     ground.rotation.x = -Math.PI / 2;
     this.scene.add(ground);
 
-    const roadMaterial = new THREE.MeshBasicMaterial({ color: 0x303331 });
+    const roadMaterial = new THREE.MeshBasicMaterial({ color: 0xf0a27f });
     const roadGeo = new THREE.PlaneGeometry(world.roadHalfWidth * 2, world.size);
     for (const x of [-30, 0, 30]) {
       const road = new THREE.Mesh(roadGeo, roadMaterial);
@@ -266,7 +273,7 @@ export class Game {
       this.scene.add(road);
     }
 
-    const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xf2d160 });
+    const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xf7f0d5 });
     for (const x of [-30, 0, 30]) {
       const line = new THREE.Mesh(new THREE.PlaneGeometry(0.35, world.size), lineMaterial);
       line.rotation.x = -Math.PI / 2;
@@ -296,8 +303,21 @@ export class Game {
     });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, height), material);
     mesh.position.set(x + Math.random() * 8 - 4, height / 2, z + Math.random() * 8 - 4);
-    mesh.rotation.y = Math.random() > 0.5 ? 0 : Math.PI / 2;
+    mesh.userData.staticBillboard = true;
     this.scene.add(mesh);
+    this.addBillboard(mesh);
+  }
+
+  addBillboard(mesh) {
+    if (!this.billboards.includes(mesh)) {
+      this.billboards.push(mesh);
+    }
+  }
+
+  faceBillboards() {
+    for (const mesh of this.billboards) {
+      mesh.lookAt(this.camera.position);
+    }
   }
 }
 
@@ -339,9 +359,9 @@ function buildingTexture() {
   canvas.width = 192;
   canvas.height = 384;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#545f68";
+  ctx.fillStyle = "#aebfc0";
   ctx.fillRect(18, 8, 156, 360);
-  ctx.fillStyle = "#9ed0d8";
+  ctx.fillStyle = "#eef5f2";
   for (let y = 34; y < 330; y += 44) {
     for (let x = 42; x < 150; x += 42) {
       ctx.fillRect(x, y, 22, 24);

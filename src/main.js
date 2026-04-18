@@ -2,9 +2,10 @@ import { Game } from "./game.js";
 import { InputManager } from "./input.js";
 import { UI } from "./ui.js";
 
-const canvas = document.querySelector("#game-canvas");
+const root = document.querySelector("#game-root");
+const ui = new UI(root);
 const input = new InputManager();
-const ui = new UI();
+const canvas = ui.canvas;
 const game = new Game(canvas, input, ui);
 
 ui.onStart(() => game.chooseDifficulty());

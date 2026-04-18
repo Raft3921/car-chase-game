@@ -1,37 +1,26 @@
 import { difficulties, vehicles } from "./config.js";
 
-const screens = {
-  title: document.querySelector("#title-screen"),
-  difficulty: document.querySelector("#difficulty-screen"),
-  vehicle: document.querySelector("#vehicle-screen"),
-  intro: document.querySelector("#intro-screen"),
-  result: document.querySelector("#result-screen"),
-};
-
 export class UI {
-  constructor() {
-    this.hud = document.querySelector("#hud");
-    this.mobileControls = document.querySelector("#mobile-controls");
-    this.timeLeft = document.querySelector("#time-left");
-    this.policeCount = document.querySelector("#police-count");
-    this.tauntCount = document.querySelector("#taunt-count");
-    this.arrestFill = document.querySelector("#arrest-fill");
-    this.dialogueText = document.querySelector("#dialogue-text");
-    this.dialogueButton = document.querySelector("#dialogue-button");
-    this.resultKicker = document.querySelector("#result-kicker");
-    this.resultTitle = document.querySelector("#result-title");
-    this.resultSummary = document.querySelector("#result-summary");
+  constructor(root) {
+    this.root = root;
+    this.screens = {};
+    this.root.replaceChildren();
+    this.canvas = element("canvas", { id: "game-canvas" });
+    this.root.append(this.canvas);
 
+    this.createScreens();
+    this.createHud();
+    this.createMobileControls();
     this.buildDifficultyOptions();
     this.buildVehicleOptions();
   }
 
   onStart(callback) {
-    document.querySelector("#start-button").addEventListener("click", callback);
+    this.startButton.addEventListener("click", callback);
   }
 
   onRestart(callback) {
-    document.querySelector("#restart-button").addEventListener("click", callback);
+    this.restartButton.addEventListener("click", callback);
   }
 
   onDifficulty(callback) {
@@ -43,8 +32,8 @@ export class UI {
   }
 
   show(name) {
-    Object.values(screens).forEach((screen) => screen.classList.remove("is-active"));
-    if (screens[name]) screens[name].classList.add("is-active");
+    Object.values(this.screens).forEach((screen) => screen.classList.remove("is-active"));
+    if (this.screens[name]) this.screens[name].classList.add("is-active");
     const playing = name === "play";
     this.hud.hidden = !playing;
     this.mobileControls.hidden = !playing;
@@ -79,27 +68,135 @@ export class UI {
     this.show("result");
   }
 
+  createScreens() {
+    const titleBlock = element("div", { className: "title-block" }, [
+      element("p", { className: "kicker", text: "ハリボテ3Dカーチェイス" }),
+      element("h1", { text: "20時間逃げ切れ！" }),
+      element("p", { className: "lead", text: "理不尽な逮捕から逃げ続けろ。煽るほど、追っ手は増える。" }),
+    ]);
+    this.startButton = element("button", { id: "start-button", className: "primary-button", text: "スタート" });
+    titleBlock.append(this.startButton);
+    this.screens.title = element("section", { id: "title-screen", className: "screen is-active" }, [titleBlock]);
+
+    this.difficultyOptions = element("div", { id: "difficulty-options", className: "choice-row" });
+    this.screens.difficulty = element("section", { id: "difficulty-screen", className: "screen difficulty-screen" }, [
+      element("div", { className: "choice-panel" }, [
+        element("p", { className: "kicker", text: "難易度選択" }),
+        element("h2", { text: "逃げ切る時間を選べ" }),
+        this.difficultyOptions,
+      ]),
+    ]);
+
+    this.vehicleOptions = element("div", { id: "vehicle-options", className: "choice-row vehicle-row" });
+    this.screens.vehicle = element("section", { id: "vehicle-screen", className: "screen vehicle-screen" }, [
+      element("div", { className: "choice-panel" }, [
+        element("p", { className: "kicker", text: "車種選択" }),
+        element("h2", { text: "今回の逃走車" }),
+        this.vehicleOptions,
+      ]),
+    ]);
+
+    this.dialogueText = element("p", { id: "dialogue-text", text: "そこの車、止まってください。" });
+    this.dialogueButton = element("button", { id: "dialogue-button", className: "primary-button", text: "進む" });
+    this.screens.intro = element("section", { id: "intro-screen", className: "screen dialogue-screen" }, [
+      element("div", { className: "dialogue-box" }, [this.dialogueText, this.dialogueButton]),
+    ]);
+
+    this.resultKicker = element("p", { id: "result-kicker", className: "kicker", text: "逃走終了" });
+    this.resultTitle = element("h2", { id: "result-title", text: "ゲームオーバー" });
+    this.resultSummary = element("p", { id: "result-summary" });
+    this.restartButton = element("button", { id: "restart-button", className: "primary-button", text: "タイトルへ" });
+    this.screens.result = element("section", { id: "result-screen", className: "screen result-screen" }, [
+      element("div", { className: "result-box" }, [
+        this.resultKicker,
+        this.resultTitle,
+        this.resultSummary,
+        this.restartButton,
+      ]),
+    ]);
+
+    this.root.append(
+      this.screens.title,
+      this.screens.difficulty,
+      this.screens.vehicle,
+      this.screens.intro,
+      this.screens.result
+    );
+  }
+
+  createHud() {
+    this.timeLeft = element("strong", { id: "time-left", text: "00:00:00;00" });
+    this.policeCount = element("strong", { id: "police-count", text: "1" });
+    this.tauntCount = element("strong", { id: "taunt-count", text: "0" });
+    this.arrestFill = element("span", { id: "arrest-fill" });
+
+    this.hud = element("div", { id: "hud", className: "hud" }, [
+      element("div", { className: "hud-cluster" }, [
+        hudItem("残り", this.timeLeft),
+        hudItem("パトカー", this.policeCount),
+        hudItem("煽り", this.tauntCount),
+      ]),
+      element("div", { className: "arrest-meter", ariaLabel: "逮捕ゲージ" }, [this.arrestFill]),
+    ]);
+    this.hud.hidden = true;
+    this.root.append(this.hud);
+  }
+
+  createMobileControls() {
+    this.mobileControls = element("div", { id: "mobile-controls", className: "mobile-controls" }, [
+      element("div", { className: "steer-controls" }, [
+        element("button", { dataTouch: "left", ariaLabel: "左", text: "←" }),
+        element("button", { dataTouch: "right", ariaLabel: "右", text: "→" }),
+      ]),
+      element("div", { className: "drive-controls" }, [
+        element("button", { dataTouch: "taunt", ariaLabel: "煽り", className: "taunt-button", text: "煽" }),
+        element("button", { dataTouch: "brake", ariaLabel: "ブレーキ", text: "B" }),
+        element("button", { dataTouch: "accelerate", ariaLabel: "アクセル", text: "A" }),
+      ]),
+    ]);
+    this.mobileControls.hidden = true;
+    this.root.append(this.mobileControls);
+  }
+
   buildDifficultyOptions() {
-    const container = document.querySelector("#difficulty-options");
     difficulties.forEach((difficulty) => {
-      const button = document.createElement("button");
-      button.className = "choice-card";
-      button.innerHTML = `<strong>${difficulty.label}</strong><span>${difficulty.description}</span>`;
+      const button = element("button", { className: "choice-card" }, [
+        element("strong", { text: difficulty.label }),
+        element("span", { text: difficulty.description }),
+      ]);
       button.addEventListener("click", () => this.difficultyCallback?.(difficulty));
-      container.append(button);
+      this.difficultyOptions.append(button);
     });
   }
 
   buildVehicleOptions() {
-    const container = document.querySelector("#vehicle-options");
     vehicles.forEach((vehicle) => {
-      const button = document.createElement("button");
-      button.className = "choice-card";
-      button.innerHTML = `<strong>${vehicle.label}</strong><span>${vehicle.description}</span>`;
+      const button = element("button", { className: "choice-card" }, [
+        element("strong", { text: vehicle.label }),
+        element("span", { text: vehicle.description }),
+      ]);
       button.addEventListener("click", () => this.vehicleCallback?.(vehicle));
-      container.append(button);
+      this.vehicleOptions.append(button);
     });
   }
+}
+
+function hudItem(label, valueElement) {
+  return element("div", { className: "hud-item" }, [
+    element("span", { text: label }),
+    valueElement,
+  ]);
+}
+
+function element(tag, options = {}, children = []) {
+  const node = document.createElement(tag);
+  if (options.id) node.id = options.id;
+  if (options.className) node.className = options.className;
+  if (options.text !== undefined) node.textContent = options.text;
+  if (options.ariaLabel) node.setAttribute("aria-label", options.ariaLabel);
+  if (options.dataTouch) node.dataset.touch = options.dataTouch;
+  node.append(...children);
+  return node;
 }
 
 function formatTime(seconds) {
