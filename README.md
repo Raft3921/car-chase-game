@@ -11,13 +11,26 @@
 
 ## ローカル実行
 
-Three.jsをCDNから読み込むため、ローカルサーバー経由で開いてください。
+`index.html` をブラウザで直接開いて遊べます。
+
+ローカルサーバーで確認したい場合は、以下でも起動できます。
 
 ```sh
 python3 -m http.server 5173
 ```
 
 その後、ブラウザで `http://localhost:5173` を開きます。
+
+## 開発メモ
+
+`index.html` は直開き対応のため、`src/bundle.js` を読み込みます。
+`src/*.js` を編集した後は、以下でバンドルを作り直してください。
+
+```sh
+npm install --no-save three@0.164.1 esbuild
+npx esbuild src/main.js --bundle --format=iife --global-name=CarChaseGame --minify --outfile=src/bundle.js
+rm -rf node_modules
+```
 
 ## GitHub Pages公開
 
